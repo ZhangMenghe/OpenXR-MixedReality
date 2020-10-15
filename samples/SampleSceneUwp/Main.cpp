@@ -95,6 +95,8 @@ namespace {
             // Creating a HolographicSpace before activating the CoreWindow to make it a holographic window
             windows::CoreWindow window = windows::CoreWindow::GetForCurrentThread();
             windows::HolographicSpace holographicSpace = windows::HolographicSpace::CreateForCoreWindow(window);
+
+            
             window.Activate();
 
             XrHolographicWindowAttachmentMSFT holographicWindowAttachment{XR_TYPE_HOLOGRAPHIC_WINDOW_ATTACHMENT_MSFT};

@@ -49,3 +49,13 @@
 #include <SampleShared/ScopeGuard.h>
 
 #include <fmt/format.h>
+
+#include <GLES3/gl31.h>
+#include <GLES3/gl3platform.h>
+// EGL includes
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <EGL/eglplatform.h>
+#include <EGL/eglext_angle.h>
+
+#include <angle_windowsstore.h>
