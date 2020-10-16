@@ -94,7 +94,7 @@ namespace {
             // NOTE: CoreWindow will be activated later after the HolographicSpace has been created.
         }
 
-        void InitializeGL(windows::HolographicSpace holographicSpace) {
+        void InitializeGL(windows::CoreWindow coreWindow) {
             const EGLint configAttributes[] = {
                 EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_STENCIL_SIZE, 8, EGL_NONE};
 
@@ -199,7 +199,7 @@ namespace {
             }
 
             winrt::Windows::Foundation::Collections::PropertySet surfaceProperties;
-            surfaceProperties.Insert(EGLNativeWindowTypeProperty, holographicSpace);
+            surfaceProperties.Insert(EGLNativeWindowTypeProperty, coreWindow);
             //EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(&surfaceProperties);
             EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(winrt::get_abi(surfaceProperties));
 
@@ -219,7 +219,7 @@ namespace {
             windows::CoreWindow window = windows::CoreWindow::GetForCurrentThread();
             windows::HolographicSpace holographicSpace = windows::HolographicSpace::CreateForCoreWindow(window);
 
-             InitializeGL(holographicSpace);
+             InitializeGL(window);
             
             window.Activate();
 
