@@ -119,7 +119,7 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">$(SolutionDir)\..\angle\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">$(SolutionDir)\..\angle\out\winuwp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">C:\Github\OpenXR-MixedReality\third_party\Angle\libs\Debug\arm64;$(SolutionDir)\..\angle\out\winuwp;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">%(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>

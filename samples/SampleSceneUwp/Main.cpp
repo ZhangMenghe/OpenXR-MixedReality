@@ -58,9 +58,9 @@ namespace {
         appConfig.RequestedExtensions.push_back(XR_MSFT_HAND_TRACKING_MESH_EXTENSION_NAME);
 
         auto app = CreateXrApp(appConfig);
-        app->AddScene(TryCreateTitleScene(app->Context()));
+        //app->AddScene(TryCreateTitleScene(app->Context()));
         app->AddScene(TryCreateOrbitScene(app->Context()));
-        app->AddScene(TryCreateHandTrackingScene(app->Context()));
+        //app->AddScene(TryCreateHandTrackingScene(app->Context()));
         return app;
     }
 
@@ -164,7 +164,7 @@ namespace {
             }
 
             // This tries to initialize EGL to D3D11 Feature Level 10_0+. See above comment for details.
-            auto mEglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, defaultDisplayAttributes);
+            mEglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, defaultDisplayAttributes);
             if (mEglDisplay == EGL_NO_DISPLAY) {
                 std::cout << "please" << std::endl;
                 throw std::exception("Failed to get EGL display");
@@ -206,9 +206,17 @@ namespace {
             //winrt::com_ptr<abi::IStringable> test{
             //    surfaceProperties.as<abi::IStringable>()}; // Microsoft::WRL::ComPtr<IInspectable> test
 
-            auto mEglSurface = eglCreateWindowSurface(mEglDisplay, config, win, surfaceAttributes);
+            mEglSurface = eglCreateWindowSurface(mEglDisplay, config, win, surfaceAttributes);
             if (mEglSurface == EGL_NO_SURFACE) {
                 throw std::exception("Failed to create EGL fullscreen surface");
+            }
+            mEglContext = eglCreateContext(mEglDisplay, config, EGL_NO_CONTEXT, contextAttributes);
+            if (mEglContext == EGL_NO_CONTEXT) {
+                throw std::exception("Failed to create EGL context");
+            }
+
+            if (eglMakeCurrent(mEglDisplay, mEglSurface, mEglSurface, mEglContext) == EGL_FALSE) {
+                throw std::exception("Failed to make fullscreen EGLSurface current");
             }
         }
         
@@ -218,10 +226,9 @@ namespace {
             // Creating a HolographicSpace before activating the CoreWindow to make it a holographic window
             windows::CoreWindow window = windows::CoreWindow::GetForCurrentThread();
             windows::HolographicSpace holographicSpace = windows::HolographicSpace::CreateForCoreWindow(window);
-
-             InitializeGL(window);
-            
             window.Activate();
+
+            InitializeGL(window);
 
             XrHolographicWindowAttachmentMSFT holographicWindowAttachment{XR_TYPE_HOLOGRAPHIC_WINDOW_ATTACHMENT_MSFT};
             holographicWindowAttachment.coreWindow = window.as<::IUnknown>().get();
@@ -272,6 +279,10 @@ namespace {
 
     private:
         bool m_windowClosed{false};
+
+        EGLDisplay mEglDisplay;
+        EGLContext mEglContext;
+        EGLSurface mEglSurface;
     };
 
     struct AppViewSource : winrt::implements<AppViewSource, windows::IFrameworkViewSource> {
