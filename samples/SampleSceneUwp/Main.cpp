@@ -19,8 +19,7 @@
 std::unique_ptr<engine::Scene> TryCreateTitleScene(engine::Context& context);
 std::unique_ptr<engine::Scene> TryCreateOrbitScene(engine::Context& context);
 std::unique_ptr<engine::Scene> TryCreateHandTrackingScene(engine::Context& context);
-
-#include <Unknwn.h> // Required to interop with IUnknown. Must be included before C++/WinRT headers.
+#include <windows.foundation.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.ApplicationModel.Activation.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
@@ -29,6 +28,12 @@ std::unique_ptr<engine::Scene> TryCreateHandTrackingScene(engine::Context& conte
 #include <winrt/Windows.UI.Text.Core.h>
 #include <winrt/Windows.UI.ViewManagement.h>
 #include <winrt/Windows.Graphics.Holographic.h>
+#include <winrt/Windows.Foundation.Collections.h>
+#include <wrl.h>
+
+namespace abi {
+    using namespace ABI::Windows::Foundation;
+};
 
 namespace windows {
     using namespace winrt::Windows::ApplicationModel::Activation;
@@ -98,8 +103,8 @@ namespace {
             const EGLint surfaceAttributes[] = {
                 // EGL_ANGLE_SURFACE_RENDER_TO_BACK_BUFFER is part of the same optimization as EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER
                 // (see above). If you have compilation issues with it then please update your Visual Studio templates.
-                // EGL_ANGLE_SURFACE_RENDER_TO_BACK_BUFFER,
-                EGL_TRUE,
+                //EGL_ANGLE_SURFACE_RENDER_TO_BACK_BUFFER,
+                //EGL_TRUE,
                 EGL_NONE};
 
             const EGLint defaultDisplayAttributes[] = {
@@ -131,8 +136,8 @@ namespace {
                 9,
                 EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE,
                 3,
-                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
-                EGL_TRUE,
+                //EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
+                //EGL_TRUE,
                 EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
                 EGL_TRUE,
                 EGL_NONE,
@@ -143,10 +148,10 @@ namespace {
                 // They are used if eglInitialize fails with both the default display attributes and the 9_3 display attributes.
                 EGL_PLATFORM_ANGLE_TYPE_ANGLE,
                 EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
-                EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
-                // EGL_PLATFORM_ANGLE_DEVICE_TYPE_WARP_ANGLE,
-                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
-                EGL_TRUE,
+                //EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
+                //EGL_PLATFORM_ANGLE_DEVICE_TYPE_WARP_ANGLE,
+                //EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
+                //EGL_TRUE,
                 EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
                 EGL_TRUE,
                 EGL_NONE,
@@ -195,7 +200,12 @@ namespace {
 
             winrt::Windows::Foundation::Collections::PropertySet surfaceProperties;
             surfaceProperties.Insert(EGLNativeWindowTypeProperty, holographicSpace);
-            EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(&surfaceProperties);
+            //EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(&surfaceProperties);
+            EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(winrt::get_abi(surfaceProperties));
+
+            //winrt::com_ptr<abi::IStringable> test{
+            //    surfaceProperties.as<abi::IStringable>()}; // Microsoft::WRL::ComPtr<IInspectable> test
+
             auto mEglSurface = eglCreateWindowSurface(mEglDisplay, config, win, surfaceAttributes);
             if (mEglSurface == EGL_NO_SURFACE) {
                 throw std::exception("Failed to create EGL fullscreen surface");

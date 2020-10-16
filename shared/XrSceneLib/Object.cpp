@@ -17,6 +17,9 @@
 #include "Object.h"
 
 using engine::Object;
+using engine::FrameTime;
+using engine::Context;
+//using engine::FrameTime;
 
 void Object::SetOnlyVisibleForViewIndex(uint32_t viewIndex) {
     assert(viewIndex < m_visibleViewIndexMask.MaxViewCount);
@@ -28,7 +31,7 @@ bool Object::IsVisibleForViewIndex(uint32_t viewIndex) const {
     return (m_visibleViewIndexMask.m_mask & (1 << viewIndex)) > 0;
 }
 
-void Object::Update(engine::Context& /*context*/, const FrameTime& frameTime) {
+void Object::Update(engine::Context& context, const FrameTime& frameTime) {
     Motion.UpdateMotionAndPose(Pose(), frameTime.Elapsed);
 }
 

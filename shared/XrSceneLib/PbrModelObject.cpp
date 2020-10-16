@@ -36,7 +36,7 @@ std::shared_ptr<Pbr::Model> PbrModelObject::GetModel() const {
     return m_pbrModel;
 }
 
-void PbrModelObject::Render(Context& context) const {
+void PbrModelObject::Render(engine::Context& context) const {
     if (!IsVisible() || !m_pbrModel) {
         return;
     }

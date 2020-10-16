@@ -21,6 +21,7 @@
 #define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 #include <windows.h>
 
+
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -59,3 +60,10 @@
 #include <EGL/eglext_angle.h>
 
 #include <angle_windowsstore.h>
+
+#include <unknwn.h> // Required to interop with IUnknown. Must be included before C++/WinRT headers.
+#include "winrt/base.h"
+namespace winrt::impl {
+    template <typename Async>
+    auto wait_for(Async const& async, Windows::Foundation::TimeSpan const& timeout);
+}
