@@ -16,8 +16,9 @@
     <None Include="TemporaryKey.pfx" />
     <None Include="packages.config" />
     <None Include="$(OpenXRLoaderBinaryRoot)\bin\openxr_loader.dll" />
-    <None Include="..\..\third_party\Angle\dlls\Release\arm64\libEGL.dll" />
-    <None Include="..\..\third_party\Angle\dlls\Release\arm64\libGLESv2.dll" />
+    <None Include="libEGL.dll" />
+    <None Include="libGLESv2.dll" />
+    <None Include="zlib.dll" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="DeploymentContent">

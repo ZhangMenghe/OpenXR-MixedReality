@@ -89,6 +89,119 @@ namespace {
             // NOTE: CoreWindow will be activated later after the HolographicSpace has been created.
         }
 
+        void InitializeGL(windows::HolographicSpace holographicSpace) {
+            const EGLint configAttributes[] = {
+                EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_DEPTH_SIZE, 8, EGL_STENCIL_SIZE, 8, EGL_NONE};
+
+            const EGLint contextAttributes[] = {EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE};
+
+            const EGLint surfaceAttributes[] = {
+                // EGL_ANGLE_SURFACE_RENDER_TO_BACK_BUFFER is part of the same optimization as EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER
+                // (see above). If you have compilation issues with it then please update your Visual Studio templates.
+                // EGL_ANGLE_SURFACE_RENDER_TO_BACK_BUFFER,
+                EGL_TRUE,
+                EGL_NONE};
+
+            const EGLint defaultDisplayAttributes[] = {
+                // These are the default display attributes, used to request ANGLE's D3D11 renderer.
+                // eglInitialize will only succeed with these attributes if the hardware supports D3D11 Feature Level 10_0+.
+                EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+                EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+
+                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER is an optimization that can have large performance benefits on mobile
+                // devices. Its syntax is subject to change, though. Please update your Visual Studio templates if you experience
+                // compilation issues with it.
+                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
+                // EGL_TRUE,
+
+                // EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE is an option that enables ANGLE to automatically call
+                // the IDXGIDevice3::Trim method on behalf of the application when it gets suspended.
+                // Calling IDXGIDevice3::Trim when an application is suspended is a Windows Store application certification requirement.
+                EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
+                EGL_TRUE,
+                EGL_NONE,
+            };
+
+            const EGLint fl9_3DisplayAttributes[] = {
+                // These can be used to request ANGLE's D3D11 renderer, with D3D11 Feature Level 9_3.
+                // These attributes are used if the call to eglInitialize fails with the default display attributes.
+                EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+                EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+                EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE,
+                9,
+                EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE,
+                3,
+                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
+                EGL_TRUE,
+                EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
+                EGL_TRUE,
+                EGL_NONE,
+            };
+
+            const EGLint warpDisplayAttributes[] = {
+                // These attributes can be used to request D3D11 WARP.
+                // They are used if eglInitialize fails with both the default display attributes and the 9_3 display attributes.
+                EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+                EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+                EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
+                // EGL_PLATFORM_ANGLE_DEVICE_TYPE_WARP_ANGLE,
+                // EGL_ANGLE_DISPLAY_ALLOW_RENDER_TO_BACK_BUFFER,
+                EGL_TRUE,
+                EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
+                EGL_TRUE,
+                EGL_NONE,
+            };
+
+            PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
+                reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
+            if (!eglGetPlatformDisplayEXT) {
+                std::exception("Failed to get function eglGetPlatformDisplayEXT");
+            }
+
+            // This tries to initialize EGL to D3D11 Feature Level 10_0+. See above comment for details.
+            auto mEglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, defaultDisplayAttributes);
+            if (mEglDisplay == EGL_NO_DISPLAY) {
+                std::cout << "please" << std::endl;
+                throw std::exception("Failed to get EGL display");
+            }
+            if (eglInitialize(mEglDisplay, NULL, NULL) == EGL_FALSE) {
+                // This tries to initialize EGL to D3D11 Feature Level 9_3, if 10_0+ is unavailable (e.g. on some mobile devices).
+                mEglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, fl9_3DisplayAttributes);
+                if (mEglDisplay == EGL_NO_DISPLAY) {
+                    throw std::exception("Failed to get EGL display");
+                }
+
+                if (eglInitialize(mEglDisplay, NULL, NULL) == EGL_FALSE) {
+                    // This initializes EGL to D3D11 Feature Level 11_0 on WARP, if 9_3+ is unavailable on the default GPU.
+                    mEglDisplay = eglGetPlatformDisplayEXT(EGL_PLATFORM_ANGLE_ANGLE, EGL_DEFAULT_DISPLAY, warpDisplayAttributes);
+                    if (mEglDisplay == EGL_NO_DISPLAY) {
+                        throw std::exception("Failed to get EGL display");
+                    }
+
+                    if (eglInitialize(mEglDisplay, NULL, NULL) == EGL_FALSE) {
+                        // If all of the calls to eglInitialize returned EGL_FALSE then an error has occurred.
+                        throw std::exception("Failed to initialize EGL");
+                    }
+                }
+            }
+            EGLConfig config = NULL;
+            EGLint numConfigs = 0;
+            if (eglGetConfigs(mEglDisplay, nullptr, 0, &numConfigs) == EGL_FALSE) {
+                throw std::exception("Failed to get EGLConfig count");
+            }
+            if (eglChooseConfig(mEglDisplay, configAttributes, &config, 1, &numConfigs) == EGL_FALSE) {
+                throw std::exception("Failed to choose first EGLConfig");
+            }
+
+            winrt::Windows::Foundation::Collections::PropertySet surfaceProperties;
+            surfaceProperties.Insert(EGLNativeWindowTypeProperty, holographicSpace);
+            EGLNativeWindowType win = reinterpret_cast<EGLNativeWindowType>(&surfaceProperties);
+            auto mEglSurface = eglCreateWindowSurface(mEglDisplay, config, win, surfaceAttributes);
+            if (mEglSurface == EGL_NO_SURFACE) {
+                throw std::exception("Failed to create EGL fullscreen surface");
+            }
+        }
+        
         void Run() {
             sample::Trace("IFrameworkView::Run");
 
@@ -96,6 +209,7 @@ namespace {
             windows::CoreWindow window = windows::CoreWindow::GetForCurrentThread();
             windows::HolographicSpace holographicSpace = windows::HolographicSpace::CreateForCoreWindow(window);
 
+             InitializeGL(holographicSpace);
             
             window.Activate();
 

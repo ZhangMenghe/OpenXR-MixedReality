@@ -103,7 +103,7 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
-      <AdditionalDependencies>OneCore.lib;libEGL.dll.lib;libGLESv2.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OneCore.lib;libEGL.dll.lib;libGLESv2.dll.lib;zlib.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
@@ -111,7 +111,11 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">C:\Github\OpenXR-MixedReality\third_party\Angle\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">C:\Github\OpenXR-MixedReality\third_party\Angle\libs\Debug\arm64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
@@ -140,14 +144,17 @@
     <ClCompile Include="Scene_HandTracking.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\third_party\Angle\dlls\Release\arm64\libEGL.dll">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</DeploymentContent>
+    <None Include="libEGL.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
     </None>
-    <None Include="..\..\third_party\Angle\dlls\Release\arm64\libGLESv2.dll">
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</DeploymentContent>
+    <None Include="libGLESv2.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
     </None>
     <None Include="packages.config" />
     <None Include="TemporaryKey.pfx" />
+    <None Include="zlib.dll">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</DeploymentContent>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" Condition="'$(LinkCompiled)'!='false'">
