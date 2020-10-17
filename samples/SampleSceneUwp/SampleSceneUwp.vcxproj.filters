@@ -5,9 +5,12 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Scene_Orbit.cpp" />
     <ClCompile Include="Scene_HandTracking.cpp" />
+    <ClCompile Include="SimpleObjRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="SimpleObjRenderer.h" />
+    <ClInclude Include="MathHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />

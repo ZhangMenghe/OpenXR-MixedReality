@@ -16,7 +16,7 @@
 #include "pch.h"
 #include <XrSceneLib/PbrModelObject.h>
 #include <XrSceneLib/Scene.h>
-
+#include "SimpleObjRenderer.h"
 using namespace DirectX;
 using namespace xr::math;
 using namespace std::chrono;
@@ -55,11 +55,12 @@ namespace {
                                                                   });
             }
 
-            m_sun = AddObject(engine::CreateSphere(m_context.PbrResources, 0.5f, 20, Pbr::FromSRGB(Colors::OrangeRed)));
-            m_sun->SetVisible(false); // invisible until tracking is valid and placement succeeded.
+            //mobj = AddObject(engine::CreateSphere(m_context.PbrResources, 0.5f, 20, Pbr::FromSRGB(Colors::OrangeRed)));
+            mobj = AddObject(std::make_shared<SimpleObjRenderer>(std::move(false)));
+            mobj->SetVisible(false); // invisible until tracking is valid and placement succeeded.
 
-            m_earth = AddObject(engine::CreateSphere(m_context.PbrResources, 0.1f, 20, Pbr::FromSRGB(Colors::SeaGreen)));
-            m_earth->SetParent(m_sun);
+            //m_earth = AddObject(engine::CreateSphere(m_context.PbrResources, 0.1f, 20, Pbr::FromSRGB(Colors::SeaGreen)));
+            //m_earth->SetParent(m_sun);
 
             XrReferenceSpaceCreateInfo createInfo{XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
             createInfo.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_VIEW;
@@ -73,7 +74,7 @@ namespace {
             getInfo.action = m_selectAction;
             CHECK_XRCMD(xrGetActionStateBoolean(m_context.Session.Handle, &getInfo, &state));
             const bool isSelectPressed = state.isActive && state.changedSinceLastSync && state.currentState;
-            const bool firstUpdate = !m_sun->IsVisible();
+            const bool firstUpdate = !mobj->IsVisible();
 
             if (firstUpdate || isSelectPressed) {
                 const XrTime time = state.isActive ? state.lastChangeTime : frameTime.PredictedDisplayTime;
@@ -93,32 +94,33 @@ namespace {
                     m_targetPoseInScene = Pose::LookAt(sunInScene, userForwardInScene, {0, 1, 0});
 
                     if (firstUpdate) {
-                        m_sun->SetVisible(true);
-                        m_sun->Pose() = m_targetPoseInScene;
+                        mobj->SetVisible(true);
+                        mobj->Pose() = m_targetPoseInScene;
                     }
                 }
             }
 
             // Slowly ease the sun to the target location
-            m_sun->Pose() = Pose::Slerp(m_sun->Pose(), m_targetPoseInScene, 0.05f);
+            mobj->Pose() = Pose::Slerp(mobj->Pose(), m_targetPoseInScene, 0.05f);
 
             // Animate the earth orbiting the sun, and pause when app lost focus.
-            if (m_context.SessionState == XR_SESSION_STATE_FOCUSED) {
-                const float angle = frameTime.TotalElapsedSeconds * XM_PI; // half circle a second
+            //if (m_context.SessionState == XR_SESSION_STATE_FOCUSED) {
+            //    const float angle = frameTime.TotalElapsedSeconds * XM_PI; // half circle a second
 
-                XrVector3f earthPosition;
-                earthPosition.x = 0.6f * sin(angle);
-                earthPosition.y = 0.0f;
-                earthPosition.z = 0.6f * cos(angle);
-                m_earth->Pose().position = earthPosition;
-            }
+            //    XrVector3f earthPosition;
+            //    earthPosition.x = 0.6f * sin(angle);
+            //    earthPosition.y = 0.0f;
+            //    earthPosition.z = 0.6f * cos(angle);
+            //    m_earth->Pose().position = earthPosition;
+            //}
         }
 
     private:
         XrAction m_selectAction{XR_NULL_HANDLE};
         XrPosef m_targetPoseInScene = Pose::Identity();
-        std::shared_ptr<engine::PbrModelObject> m_sun;
-        std::shared_ptr<engine::PbrModelObject> m_earth;
+       /* std::shared_ptr<engine::PbrModelObject> m_sun;
+        std::shared_ptr<engine::PbrModelObject> m_earth;*/
+        std::shared_ptr<SimpleObjRenderer> mobj;
         xr::SpaceHandle m_viewSpace;
     };
 } // namespace

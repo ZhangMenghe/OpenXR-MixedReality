@@ -41,6 +41,8 @@
 
 #define XR_USE_PLATFORM_WIN32
 #define XR_USE_GRAPHICS_API_D3D11
+#define GL_GLEXT_PROTOTYPES
+
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
@@ -51,8 +53,10 @@
 
 #include <fmt/format.h>
 
-#include <GLES3/gl31.h>
-#include <GLES3/gl3platform.h>
+//#include <GLES3/gl31.h>
+//#include <GLES3/gl3platform.h>
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
 // EGL includes
 #include <EGL/egl.h>
 #include <EGL/eglext.h>

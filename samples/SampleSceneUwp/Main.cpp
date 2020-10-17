@@ -160,7 +160,7 @@ namespace {
             PFNEGLGETPLATFORMDISPLAYEXTPROC eglGetPlatformDisplayEXT =
                 reinterpret_cast<PFNEGLGETPLATFORMDISPLAYEXTPROC>(eglGetProcAddress("eglGetPlatformDisplayEXT"));
             if (!eglGetPlatformDisplayEXT) {
-                std::exception("Failed to get function eglGetPlatformDisplayEXT");
+                throw std::exception("Failed to get function eglGetPlatformDisplayEXT");
             }
 
             // This tries to initialize EGL to D3D11 Feature Level 10_0+. See above comment for details.
@@ -238,6 +238,8 @@ namespace {
 
             while (!m_windowClosed && app->Step()) {
                 window.Dispatcher().ProcessEvents(windows::CoreProcessEventsOption::ProcessAllIfPresent);
+                eglSwapBuffers(mEglDisplay, mEglSurface);
+
             }
         }
 
