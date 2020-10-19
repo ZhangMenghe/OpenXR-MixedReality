@@ -219,7 +219,7 @@ namespace {
                 throw std::exception("Failed to make fullscreen EGLSurface current");
             }
         }
-        
+
         void Run() {
             sample::Trace("IFrameworkView::Run");
 
@@ -227,16 +227,13 @@ namespace {
             windows::CoreWindow window = windows::CoreWindow::GetForCurrentThread();
             windows::HolographicSpace holographicSpace = windows::HolographicSpace::CreateForCoreWindow(window);
             window.Activate();
-
-            InitializeGL(window);
-
             XrHolographicWindowAttachmentMSFT holographicWindowAttachment{XR_TYPE_HOLOGRAPHIC_WINDOW_ATTACHMENT_MSFT};
             holographicWindowAttachment.coreWindow = window.as<::IUnknown>().get();
             holographicWindowAttachment.holographicSpace = holographicSpace.as<::IUnknown>().get();
 
             std::unique_ptr<engine::XrApp> app = CreateUwpXrApp(std::move(holographicWindowAttachment));
-
             while (!m_windowClosed && app->Step()) {
+                m_projectionLayers.
                 window.Dispatcher().ProcessEvents(windows::CoreProcessEventsOption::ProcessAllIfPresent);
             }
         }

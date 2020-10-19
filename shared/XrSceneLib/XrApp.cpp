@@ -97,6 +97,7 @@ namespace {
 
         void AddScene(std::unique_ptr<engine::Scene> scene) override;
         const std::vector<std::unique_ptr<engine::Scene>>& Scenes() const override;
+        engine::ProjectionLayers m_projectionLayers;
 
         void Run() override;
         void Stop() override;
@@ -118,7 +119,7 @@ namespace {
         xr::SpaceHandle m_viewSpace;
         xr::SpaceHandle m_sceneSpace;
 
-        engine::ProjectionLayers m_projectionLayers;
+        
         std::unordered_map<XrViewConfigurationType, xr::ViewConfigurationState> m_viewConfigStates;
 
         std::mutex m_secondaryViewConfigActiveMutex;

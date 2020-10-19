@@ -139,6 +139,9 @@ namespace engine {
                 function(*layer);
             }
         }
+        void setTargetTexture(ID3D11Texture2D* ttex) {
+        
+        }
 
     private:
         mutable std::mutex m_mutex;
