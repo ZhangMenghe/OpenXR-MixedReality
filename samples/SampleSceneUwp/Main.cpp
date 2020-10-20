@@ -166,20 +166,22 @@ cbuffer TransformBuffer : register(b0) {
 struct vsIn {
 	float3 pos  : POS;
     float3 norm : NOR;
-    float2 tex: TEX;
+    //float2 tex: TEX;
 };
 struct psIn {
 	float4 pos   : SV_POSITION;
+    float3 color : COLOR0;
 };
 
 psIn vs(vsIn input) {
 	psIn output;
 	output.pos = mul(float4(input.pos.xyz, 1), world);
 	output.pos = mul(output.pos, viewproj);
+    output.color = input.norm;
 	return output;
 }
 float4 ps(psIn input) : SV_TARGET {
-	return float4(1,0,0, 1);
+	return float4(input.color, 1);
 })_";
 float app_verts[] = {
     -1, -1, -1, -1, -1, -1,                                                                 // Bottom verts
@@ -191,10 +193,10 @@ uint16_t app_inds[] = {
     1, 2, 0, 2, 3, 0, 4, 6, 5, 7, 6, 4, 6, 2, 1, 5, 6, 1, 3, 7, 4, 0, 3, 4, 4, 5, 1, 0, 4, 1, 2, 7, 3, 2, 6, 7,
 };
 float quad_verts[] = {
-    -1, -1, .0f,    .0,.0,.0,    .0,.0,
-    -1.0, 1.0,.0f,   .0,.0,.0,   .0,1,
-    1.0f, 1.0f,.0f,  .0,.0,.0,   1.0,1.0,
-    1.0f, -1.0f,.0f, .0,.0,.0,    1.0,.0,
+    -1, -1, .0f,    .0,.0,.0,    //.0,.0,
+    -1.0, 1.0,.0f,   .0,1.0,.0,   //.0,1,
+    1.0f, 1.0f,.0f,  1.0,1.0,.0,   //1.0,1.0,
+    1.0f, -1.0f,.0f, 1.0,.0,.0,   // 1.0,.0,
 };
 
 uint16_t quad_inds[] = {
@@ -1077,7 +1079,7 @@ void app_init() {
     D3D11_INPUT_ELEMENT_DESC vert_desc[] = {
         {"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        //{"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
     d3d_device->CreateInputLayout(vert_desc, ARRAYSIZE(vert_desc),
                                   vert_shader_blob->GetBufferPointer(),
