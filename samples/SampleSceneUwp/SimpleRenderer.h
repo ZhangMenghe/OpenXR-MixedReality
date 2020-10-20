@@ -6,8 +6,8 @@
     public:
         SimpleRenderer(bool holographic);
         ~SimpleRenderer();
-        void Draw();
-        void UpdateWindowSize(GLsizei width, GLsizei height);
+        void Draw(MathHelper::Matrix4 proj_mat);
+        void UpdateWindowSize(int offx, int offy, GLsizei width, GLsizei height);
 
     private:
         GLuint mProgram;

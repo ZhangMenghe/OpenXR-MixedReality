@@ -61,6 +61,8 @@
 
 #include <angle_windowsstore.h>
 
+#include "MathHelper.h"
+#include <wrl.h>
 #include <unknwn.h> // Required to interop with IUnknown. Must be included before C++/WinRT headers.
 #include "winrt/base.h"
 namespace winrt::impl {

@@ -96,7 +96,7 @@ SimpleRenderer::SimpleRenderer(bool isHolographic)
 
         uniform mat4 uModelMatrix; uniform mat4 uViewMatrix; uniform mat4 uProjMatrix; in vec4 aPosition; in vec4 aColor; out vec4 vColor;
         void main() {
-            gl_Position = uProjMatrix * uViewMatrix * uModelMatrix * aPosition;
+            gl_Position = uProjMatrix * uViewMatrix * aPosition;
             vColor = aColor;
         });
 
@@ -108,7 +108,7 @@ SimpleRenderer::SimpleRenderer(bool isHolographic)
 
         in vec4 vColor;
         out vec4 fragColor;
-        void main() { fragColor = vColor; });
+        void main() { fragColor = vec4(1.0, .0, .0, 1.0); });
 
     // Set up the shader and its uniform/attribute locations.
     mProgram = CompileProgram(vs, fs);
@@ -192,7 +192,7 @@ SimpleRenderer::~SimpleRenderer() {
     }
 }
 
-void SimpleRenderer::Draw() {
+void SimpleRenderer::Draw(MathHelper::Matrix4 proj_mat) {
     glEnable(GL_DEPTH_TEST);
 
     // On HoloLens, it is important to clear to transparent.
@@ -229,8 +229,8 @@ void SimpleRenderer::Draw() {
         MathHelper::Matrix4 viewMatrix = MathHelper::SimpleViewMatrix();
         glUniformMatrix4fv(mViewUniformLocation, 1, GL_FALSE, &(viewMatrix.m[0][0]));
 
-        MathHelper::Matrix4 projectionMatrix = MathHelper::SimpleProjectionMatrix(float(mWindowWidth) / float(mWindowHeight));
-        glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(projectionMatrix.m[0][0]));
+        //MathHelper::Matrix4 projectionMatrix = MathHelper::SimpleProjectionMatrix(float(mWindowWidth) / float(mWindowHeight));
+        glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(proj_mat.m[0][0]));
     //}
 
     // Draw 36 indices: six faces, two triangles per face, 3 indices per triangle
@@ -240,9 +240,9 @@ void SimpleRenderer::Draw() {
     mDrawCount += 1;
 }
 
-void SimpleRenderer::UpdateWindowSize(GLsizei width, GLsizei height) {
+void SimpleRenderer::UpdateWindowSize(int offsetx, int offsety, GLsizei width, GLsizei height) {
     if (!mIsHolographic) {
-        glViewport(0, 0, width, height);
+        glViewport(offsetx, offsety, width, height);
 
         mWindowWidth = width;
         mWindowHeight = height;

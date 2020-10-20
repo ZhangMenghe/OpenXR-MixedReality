@@ -115,7 +115,7 @@ namespace {
             eglQuerySurface(mEglDisplay, mEglSurface, EGL_WIDTH, &panelWidth);
             eglQuerySurface(mEglDisplay, mEglSurface, EGL_HEIGHT, &panelHeight);
             mCubeRenderer = new SimpleRenderer(false);
-            mCubeRenderer->UpdateWindowSize(panelWidth, panelHeight);
+            //mCubeRenderer->UpdateWindowSize(panelWidth, panelHeight);
             
         }
         void OnUpdate(const engine::FrameTime& frameTime) override {
@@ -165,7 +165,7 @@ namespace {
             //}
         }
         void Render(const const engine::FrameTime& frameTime, uint32_t viewIndex) {
-            mCubeRenderer->Draw();
+            //mCubeRenderer->Draw();
 
         }
         

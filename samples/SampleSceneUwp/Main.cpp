@@ -68,6 +68,8 @@ ID3D11InputLayout* app_shader_layout;
 ID3D11Buffer* app_constant_buffer;
 ID3D11Buffer* app_vertex_buffer;
 ID3D11Buffer* app_index_buffer;
+ID3D11Buffer* quad_vertex_buffer;
+ID3D11Buffer* quad_index_buffer;
 
 vector<XrPosef> app_cubes;
 
@@ -92,6 +94,8 @@ EGLConfig mEglConfig;
 EGLDisplay mEglDisplay;
 EGLSurface mEglSurface;
 SimpleRenderer* mCubeRenderer;
+vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> swap_texs;
+vector<ID3D11ShaderResourceView*> shaderResourceViewMaps;
 
 vector<XrView> xr_views;
 vector<XrViewConfigurationView> xr_config_views;
@@ -118,7 +122,9 @@ bool d3d_init(LUID& adapter_luid);
 void d3d_shutdown();
 IDXGIAdapter1* d3d_get_adapter(LUID& adapter_luid);
 swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchainImage);
-void d3d_render_layer(XrCompositionLayerProjectionView& layerView, swapchain_surfdata_t& surface);
+void d3d_render_layer(XrCompositionLayerProjectionView& layerView,
+                      swapchain_surfdata_t& surface,
+                      ID3D11ShaderResourceView* shaderResourceViewMap);
 void d3d_swapchain_destroy(swapchain_t& swapchain);
 XMMATRIX d3d_xr_projection(XrFovf fov, float clip_near, float clip_far);
 ID3DBlob* d3d_compile_shader(const char* hlsl, const char* entrypoint, const char* target);
@@ -161,6 +167,16 @@ float app_verts[] = {
 
 uint16_t app_inds[] = {
     1, 2, 0, 2, 3, 0, 4, 6, 5, 7, 6, 4, 6, 2, 1, 5, 6, 1, 3, 7, 4, 0, 3, 4, 4, 5, 1, 0, 4, 1, 2, 7, 3, 2, 6, 7,
+};
+float quad_verts[] = {
+    -1, -1, .0f,
+    -1.0, 1.0, .0f,
+    1.0f, 1.0f, .0f,
+    1.0f, -1.0f, .0f
+};
+
+uint16_t quad_inds[] = {
+    0,1,3,1,2,3
 };
 
 ///////////////////////////////////////////
@@ -662,7 +678,7 @@ bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjecti
         views[i].subImage.imageRect.extent = {xr_swapchains[i].width, xr_swapchains[i].height};
 
         // Call the rendering callback with our view and swapchain info
-        d3d_render_layer(views[i], xr_swapchains[i].surface_data[img_id]);
+        d3d_render_layer(views[i], xr_swapchains[i].surface_data[img_id], shaderResourceViewMaps[i]);
 
         // And tell OpenXR we're done with rendering to this one!
         XrSwapchainImageReleaseInfo release_info = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
@@ -833,8 +849,8 @@ void initialize_gl_contex() {
         throw std::exception("Failed to choose first EGLConfig");
     }
 }
-HANDLE GetHandle(ID3D11Texture2D& D3D11Texture2D) {
-    IDXGIResource* DXGIResource;
+HANDLE GetHandle(Microsoft::WRL::ComPtr<ID3D11Texture2D> mtex) {
+    /*IDXGIResource* DXGIResource;
 
     const HRESULT DXGIResourceResult = D3D11Texture2D.QueryInterface(__uuidof(IDXGIResource), reinterpret_cast<void**>(&DXGIResource));
 
@@ -844,36 +860,31 @@ HANDLE GetHandle(ID3D11Texture2D& D3D11Texture2D) {
 
     HANDLE SharedHandle;
     const HRESULT SharedHandleResult = DXGIResource->GetSharedHandle(&SharedHandle);
-    return SharedHandle;
+    return SharedHandle;*/
     // DXGIResource->Release();
 
     // if (FAILED(SharedHandleResult)) {
     //    return 0;
     //}
-
     // return HandleToULong(SharedHandle);
-}
-void InitializeEGL(int width, int height) {
-    D3D11_TEXTURE2D_DESC texDesc = {0};
-    texDesc.Width = width;
-    texDesc.Height = height;
-    texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-    texDesc.MipLevels = 1;
-    texDesc.ArraySize = 1;
-    texDesc.SampleDesc.Count = 1;
-    texDesc.SampleDesc.Quality = 0;
-    texDesc.Usage = D3D11_USAGE_DEFAULT;
-    texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    texDesc.CPUAccessFlags = 0;
-    texDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
 
-    ID3D11Texture2D* d3dTex = nullptr;
-    HRESULT hr = d3d_device->CreateTexture2D(&texDesc, nullptr, &d3dTex);
+    Microsoft::WRL::ComPtr<IDXGIResource> dxgiResource;
+    HANDLE sharedHandle;
+    auto hr = mtex.As(&dxgiResource);
     if FAILED (hr) {
         // error handling code
-        throw std::exception("failed to create handler");
     }
-    HANDLE sharedHandle = GetHandle(*d3dTex);
+
+    hr = dxgiResource->GetSharedHandle(&sharedHandle);
+    if FAILED (hr) {
+        // error handling code
+    }
+
+    hr = dxgiResource->GetSharedHandle(&sharedHandle);
+    return sharedHandle;
+}
+void InitializeEGL(Microsoft::WRL::ComPtr<ID3D11Texture2D> d3dTex, int width, int height) {
+    HANDLE sharedHandle = GetHandle(d3dTex);
     mEglSurface = EGL_NO_SURFACE;
 
     initialize_gl_contex();
@@ -900,7 +911,6 @@ void InitializeEGL(int width, int height) {
     eglQuerySurface(mEglDisplay, mEglSurface, EGL_WIDTH, &panelWidth);
     eglQuerySurface(mEglDisplay, mEglSurface, EGL_HEIGHT, &panelHeight);
     mCubeRenderer = new SimpleRenderer(false);
-    mCubeRenderer->UpdateWindowSize(panelWidth, panelHeight);
 }
 
 swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
@@ -908,8 +918,24 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
 
     // Get information about the swapchain image that OpenXR made for us!
     XrSwapchainImageD3D11KHR& d3d_swapchain_img = (XrSwapchainImageD3D11KHR&)swapchain_img;
-    D3D11_TEXTURE2D_DESC color_desc;
-    d3d_swapchain_img.texture->GetDesc(&color_desc);
+    D3D11_TEXTURE2D_DESC texDesc;
+    d3d_swapchain_img.texture->GetDesc(&texDesc);
+
+    texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    texDesc.MipLevels = 1;
+    texDesc.ArraySize = 1;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
+    texDesc.Usage = D3D11_USAGE_DEFAULT;
+    texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    texDesc.CPUAccessFlags = 0;
+    texDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> d3dTex;
+    swap_texs.push_back(d3dTex);
+    HRESULT hr = d3d_device->CreateTexture2D(&texDesc, nullptr, &swap_texs.back());
+    //InitializeEGL(d3dTex, texDesc.Width, texDesc.Height);
+    
 
     // Create a view resource for the swapchain image target that we can use to set up rendering.
     D3D11_RENDER_TARGET_VIEW_DESC target_desc = {};
@@ -920,14 +946,23 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     target_desc.Format = (DXGI_FORMAT)d3d_swapchain_fmt;
     d3d_device->CreateRenderTargetView(d3d_swapchain_img.texture, &target_desc, &result.target_view);
 
+        // Create the shader resource view.
+    ID3D11ShaderResourceView* shaderResourceViewMap;
+    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+    shaderResourceViewDesc.Format = texDesc.Format;
+    shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+    shaderResourceViewDesc.Texture2D.MipLevels = 1;
+    d3d_device->CreateShaderResourceView(d3d_swapchain_img.texture, &shaderResourceViewDesc, &shaderResourceViewMap);
+    shaderResourceViewMaps.push_back(shaderResourceViewMap);
     // Create a depth buffer that matches
     ID3D11Texture2D* depth_texture;
     D3D11_TEXTURE2D_DESC depth_desc = {};
     depth_desc.SampleDesc.Count = 1;
     depth_desc.MipLevels = 1;
-    depth_desc.Width = color_desc.Width;
-    depth_desc.Height = color_desc.Height;
-    depth_desc.ArraySize = color_desc.ArraySize;
+    depth_desc.Width = texDesc.Width;
+    depth_desc.Height = texDesc.Height;
+    depth_desc.ArraySize = texDesc.ArraySize;
     depth_desc.Format = DXGI_FORMAT_R32_TYPELESS;
     depth_desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
     d3d_device->CreateTexture2D(&depth_desc, nullptr, &depth_texture);
@@ -946,19 +981,22 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
 
 ///////////////////////////////////////////
 
-void d3d_render_layer(XrCompositionLayerProjectionView& view, swapchain_surfdata_t& surface) {
+void d3d_render_layer(XrCompositionLayerProjectionView& view,
+                      swapchain_surfdata_t& surface,
+                      ID3D11ShaderResourceView* shaderResourceViewMap) {
     // Set up where on the render target we want to draw, the view has a
     XrRect2Di& rect = view.subImage.imageRect;
     D3D11_VIEWPORT viewport =
         CD3D11_VIEWPORT((float)rect.offset.x, (float)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height);
     d3d_context->RSSetViewports(1, &viewport);
+    //mCubeRenderer->UpdateWindowSize((int)rect.offset.x, (int)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height);
 
     // Wipe our swapchain color and depth target clean, and then set them up for rendering!
     float clear[] = {0, 0, 0, 1};
     d3d_context->ClearRenderTargetView(surface.target_view, clear);
     d3d_context->ClearDepthStencilView(surface.depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     d3d_context->OMSetRenderTargets(1, &surface.target_view, surface.depth_view);
-
+    d3d_context->PSSetShaderResources(0, 1, &shaderResourceViewMap);
     // And now that we're set up, pass on the rest of our rendering to the application
     app_draw(view);
 }
@@ -1031,13 +1069,42 @@ void app_init() {
     d3d_device->CreateBuffer(&vert_buff_desc, &vert_buff_data, &app_vertex_buffer);
     d3d_device->CreateBuffer(&ind_buff_desc, &ind_buff_data, &app_index_buffer);
     d3d_device->CreateBuffer(&const_buff_desc, nullptr, &app_constant_buffer);
+
+    //D3D11_SUBRESOURCE_DATA vert_buff_data = {quad_verts};
+    //D3D11_SUBRESOURCE_DATA ind_buff_data = {quad_inds};
+    //CD3D11_BUFFER_DESC vert_buff_desc(sizeof(quad_verts), D3D11_BIND_VERTEX_BUFFER);
+    //CD3D11_BUFFER_DESC ind_buff_desc(sizeof(quad_inds), D3D11_BIND_INDEX_BUFFER);
+    //CD3D11_BUFFER_DESC const_buff_desc(sizeof(app_transform_buffer_t), D3D11_BIND_CONSTANT_BUFFER);
+    //d3d_device->CreateBuffer(&vert_buff_desc, &vert_buff_data, &quad_vertex_buffer);
+    //d3d_device->CreateBuffer(&ind_buff_desc, &ind_buff_data, &quad_index_buffer);
+
 }
 
 ///////////////////////////////////////////
 
 void app_draw(XrCompositionLayerProjectionView& view) {
-    // Set up camera matrices based on OpenXR's predicted viewpoint information
     XMMATRIX mat_projection = d3d_xr_projection(view.fov, 0.05f, 100.0f);
+    XMFLOAT4X4 fView;
+    XMStoreFloat4x4(&fView, mat_projection);
+    float fView_11 = fView._11;
+
+   MathHelper::Matrix4 projectionMatrix(
+       fView._11, fView._12, fView._13, fView._13, 
+       fView._21, fView._22, fView._23, fView._24,
+                                         fView._31,
+                                         fView._32,
+                                         fView._33,
+                                         fView._34,
+                                         fView._41,
+                                         fView._42,
+                                         fView._43,
+                                         fView._44
+   );
+
+    //mCubeRenderer->Draw(projectionMatrix);
+    //glFlush();
+
+    // Set up camera matrices based on OpenXR's predicted viewpoint information
     XMMATRIX mat_view = XMMatrixInverse(nullptr,
                                         XMMatrixAffineTransformation(DirectX::g_XMOne,
                                                                      DirectX::g_XMZero,
