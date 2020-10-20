@@ -191,12 +191,22 @@ SimpleRenderer::~SimpleRenderer() {
         mIndexBuffer = 0;
     }
 }
+void SimpleRenderer::Draw() {
+    glEnable(GL_DEPTH_TEST);
+
+    // On HoloLens, it is important to clear to transparent.
+    glClearColor(0.0f, 1.f, 0.f, 1.f);
+
+    // On HoloLens, this will also update the camera buffers (constant and back).
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glFlush();
+}
 
 void SimpleRenderer::Draw(MathHelper::Matrix4 proj_mat) {
     glEnable(GL_DEPTH_TEST);
 
     // On HoloLens, it is important to clear to transparent.
-    glClearColor(0.0f, 0.f, 0.f, 0.f);
+    glClearColor(0.0f, 1.f, 0.f, 1.f);
 
     // On HoloLens, this will also update the camera buffers (constant and back).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -238,6 +248,7 @@ void SimpleRenderer::Draw(MathHelper::Matrix4 proj_mat) {
     glDrawElements(GL_TRIANGLES, (6 * 2) * 3, GL_UNSIGNED_SHORT, 0);
 
     mDrawCount += 1;
+    glFlush();
 }
 
 void SimpleRenderer::UpdateWindowSize(int offsetx, int offsety, GLsizei width, GLsizei height) {
