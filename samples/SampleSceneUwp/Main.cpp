@@ -130,7 +130,7 @@ XMMATRIX d3d_xr_projection(XrFovf fov, float clip_near, float clip_far);
 ID3DBlob* d3d_compile_shader(const char* hlsl, const char* entrypoint, const char* target);
 
 ///////////////////////////////////////////
-
+/*
 constexpr char app_shader_code[] = R"_(
 cbuffer TransformBuffer : register(b0) {
 	float4x4 world;
@@ -157,8 +157,30 @@ psIn vs(vsIn input) {
 }
 float4 ps(psIn input) : SV_TARGET {
 	return float4(input.color, 1);
-})_";
+})_";*/
+constexpr char quad_shader_code[] = R"_(
+cbuffer TransformBuffer : register(b0) {
+	float4x4 world;
+	float4x4 viewproj;
+};
+struct vsIn {
+	float3 pos  : POS;
+    float3 norm : NOR;
+    float2 tex: TEX;
+};
+struct psIn {
+	float4 pos   : SV_POSITION;
+};
 
+psIn vs(vsIn input) {
+	psIn output;
+	output.pos = mul(float4(input.pos.xyz, 1), world);
+	output.pos = mul(output.pos, viewproj);
+	return output;
+}
+float4 ps(psIn input) : SV_TARGET {
+	return float4(1,0,0, 1);
+})_";
 float app_verts[] = {
     -1, -1, -1, -1, -1, -1,                                                                 // Bottom verts
     1,  -1, -1, 1,  -1, -1, 1, 1, -1, 1, 1, -1, -1, 1, -1, -1, 1, -1, -1, -1, 1, -1, -1, 1, // Top verts
@@ -169,10 +191,10 @@ uint16_t app_inds[] = {
     1, 2, 0, 2, 3, 0, 4, 6, 5, 7, 6, 4, 6, 2, 1, 5, 6, 1, 3, 7, 4, 0, 3, 4, 4, 5, 1, 0, 4, 1, 2, 7, 3, 2, 6, 7,
 };
 float quad_verts[] = {
-    -1, -1, .0f,
-    -1.0, 1.0, .0f,
-    1.0f, 1.0f, .0f,
-    1.0f, -1.0f, .0f
+    -1, -1, .0f,    .0,.0,.0,    .0,.0,
+    -1.0, 1.0,.0f,   .0,.0,.0,   .0,1,
+    1.0f, 1.0f,.0f,  .0,.0,.0,   1.0,1.0,
+    1.0f, -1.0f,.0f, .0,.0,.0,    1.0,.0,
 };
 
 uint16_t quad_inds[] = {
@@ -1046,25 +1068,34 @@ ID3DBlob* d3d_compile_shader(const char* hlsl, const char* entrypoint, const cha
 
 void app_init() {
     // Compile our shader code, and turn it into a shader resource!
-    ID3DBlob* vert_shader_blob = d3d_compile_shader(app_shader_code, "vs", "vs_5_0");
-    ID3DBlob* pixel_shader_blob = d3d_compile_shader(app_shader_code, "ps", "ps_5_0");
+    ID3DBlob* vert_shader_blob = d3d_compile_shader(quad_shader_code, "vs", "vs_5_0");
+    ID3DBlob* pixel_shader_blob = d3d_compile_shader(quad_shader_code, "ps", "ps_5_0");
     d3d_device->CreateVertexShader(vert_shader_blob->GetBufferPointer(), vert_shader_blob->GetBufferSize(), nullptr, &app_vshader);
     d3d_device->CreatePixelShader(pixel_shader_blob->GetBufferPointer(), pixel_shader_blob->GetBufferSize(), nullptr, &app_pshader);
 
     // Describe how our mesh is laid out in memory
     D3D11_INPUT_ELEMENT_DESC vert_desc[] = {
-        {"SV_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEX", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
-    d3d_device->CreateInputLayout(
-        vert_desc, (UINT)_countof(vert_desc), vert_shader_blob->GetBufferPointer(), vert_shader_blob->GetBufferSize(), &app_shader_layout);
+    d3d_device->CreateInputLayout(vert_desc, ARRAYSIZE(vert_desc),
+                                  vert_shader_blob->GetBufferPointer(),
+                                  vert_shader_blob->GetBufferSize(),
+                                  &app_shader_layout);
 
     // Create GPU resources for our mesh's vertices and indices! Constant buffers are for passing transform
     // matrices into the shaders, so make a buffer for them too!
-    D3D11_SUBRESOURCE_DATA vert_buff_data = {app_verts};
+    /*D3D11_SUBRESOURCE_DATA vert_buff_data = {app_verts};
     D3D11_SUBRESOURCE_DATA ind_buff_data = {app_inds};
     CD3D11_BUFFER_DESC vert_buff_desc(sizeof(app_verts), D3D11_BIND_VERTEX_BUFFER);
-    CD3D11_BUFFER_DESC ind_buff_desc(sizeof(app_inds), D3D11_BIND_INDEX_BUFFER);
+    CD3D11_BUFFER_DESC ind_buff_desc(sizeof(app_inds), D3D11_BIND_INDEX_BUFFER);*/
+    
+     D3D11_SUBRESOURCE_DATA vert_buff_data = {quad_verts};
+     D3D11_SUBRESOURCE_DATA ind_buff_data = {quad_inds};
+     CD3D11_BUFFER_DESC vert_buff_desc(sizeof(quad_verts), D3D11_BIND_VERTEX_BUFFER);
+     CD3D11_BUFFER_DESC ind_buff_desc(sizeof(quad_inds), D3D11_BIND_INDEX_BUFFER);
+
     CD3D11_BUFFER_DESC const_buff_desc(sizeof(app_transform_buffer_t), D3D11_BIND_CONSTANT_BUFFER);
     d3d_device->CreateBuffer(&vert_buff_desc, &vert_buff_data, &app_vertex_buffer);
     d3d_device->CreateBuffer(&ind_buff_desc, &ind_buff_data, &app_index_buffer);
