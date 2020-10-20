@@ -192,11 +192,11 @@ SimpleRenderer::~SimpleRenderer() {
     }
 }
 
-void SimpleRenderer::Draw(MathHelper::Matrix4 proj_mat) {
+void SimpleRenderer::Draw(MathHelper::Matrix4& proj_mat) {
     glEnable(GL_DEPTH_TEST);
 
     // On HoloLens, it is important to clear to transparent.
-    glClearColor(0.0f, 0.f, 0.f, 0.f);
+    glClearColor(1.0f, 0.f, 0.f, 1.f);
 
     // On HoloLens, this will also update the camera buffers (constant and back).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
