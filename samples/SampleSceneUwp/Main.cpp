@@ -96,7 +96,7 @@ EGLSurface mEglSurface;
 SimpleRenderer* mCubeRenderer;
 vector<Microsoft::WRL::ComPtr<ID3D11Texture2D>> swap_texs;
 vector<ID3D11ShaderResourceView*> shaderResourceViewMaps;
-
+ID3D11SamplerState* m_sampleState;
 vector<XrView> xr_views;
 vector<XrViewConfigurationView> xr_config_views;
 vector<swapchain_t> xr_swapchains;
@@ -159,6 +159,8 @@ float4 ps(psIn input) : SV_TARGET {
 	return float4(input.color, 1);
 })_";*/
 constexpr char quad_shader_code[] = R"_(
+Texture2D shaderTexture;
+SamplerState SampleType;
 cbuffer TransformBuffer : register(b0) {
 	float4x4 world;
 	float4x4 viewproj;
@@ -169,19 +171,20 @@ struct vsIn {
     //float2 tex: TEX;
 };
 struct psIn {
-	float4 pos   : SV_POSITION;
-    float3 color : COLOR0;
+	float4 pos : SV_POSITION;
+    float2 tex : TEXCOORD0;
 };
 
 psIn vs(vsIn input) {
 	psIn output;
 	output.pos = mul(float4(input.pos.xyz, 1), world);
 	output.pos = mul(output.pos, viewproj);
-    output.color = input.norm;
+    output.tex = input.norm.xy;
 	return output;
 }
 float4 ps(psIn input) : SV_TARGET {
-	return float4(input.color, 1);
+    //return float4(input.tex, 1, 1);
+	return shaderTexture.Sample(SampleType, input.tex);
 })_";
 float app_verts[] = {
     -1, -1, -1, -1, -1, -1,                                                                 // Bottom verts
@@ -945,6 +948,49 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     D3D11_TEXTURE2D_DESC texDesc;
     d3d_swapchain_img.texture->GetDesc(&texDesc);
 
+    /*//D3D11_TEXTURE2D_DESC desc;
+    //desc.Width = 256;
+    //desc.Height = 256;
+    texDesc.MipLevels = texDesc.ArraySize = 1;
+    texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.Usage = D3D11_USAGE_DYNAMIC;
+    texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    texDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    texDesc.MiscFlags = 0;
+
+    ID3D11Texture2D* pTexture = NULL;
+    d3d_device->CreateTexture2D(&texDesc, NULL, &pTexture);
+
+    D3D11_BOX destRegion;
+    destRegion.left = 120;
+    destRegion.right = 200;
+    destRegion.top = 100;
+    destRegion.bottom = 220;
+    destRegion.front = 0;
+    destRegion.back = 1;
+    // Set the row pitch of the targa image data.
+    auto rowPitch = (texDesc.Width * 4) * sizeof(unsigned char);
+    auto imageSize = texDesc.Width * texDesc.Height * 4;
+    unsigned char* m_targaData = new unsigned char[imageSize];
+    d3d_context->UpdateSubresource(pTexture, 0, NULL, m_targaData, rowPitch, 0);
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    // Setup the shader resource view description.
+    srvDesc.Format = texDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = -1;
+    ID3D11ShaderResourceView* m_textureView;
+    // Create the shader resource view for the texture.
+    auto hResult = d3d_device->CreateShaderResourceView(pTexture, &srvDesc, &m_textureView);
+    if (FAILED(hResult)) {
+        throw std::exception("failed to create shader resource view");
+    }
+    // Generate mipmaps for this texture.
+    d3d_context->GenerateMips(m_textureView);
+    shaderResourceViewMaps.push_back(m_textureView);
+    */
     texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     texDesc.MipLevels = 1;
     texDesc.ArraySize = 1;
@@ -960,6 +1006,36 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     HRESULT hr = d3d_device->CreateTexture2D(&texDesc, nullptr, &swap_texs.back());
     //InitializeEGL(d3dTex, texDesc.Width, texDesc.Height);
     
+    D3D11_BOX destRegion;
+    destRegion.left = 120;
+    destRegion.right = 200;
+    destRegion.top = 100;
+    destRegion.bottom = 220;
+    destRegion.front = 0;
+    destRegion.back = 1;
+    // Set the row pitch of the targa image data.
+    auto rowPitch = (texDesc.Width * 4) * sizeof(unsigned char);
+    auto imageSize = texDesc.Width * texDesc.Height * 4;
+    unsigned char* m_targaData = new unsigned char[imageSize];
+    d3d_context->UpdateSubresource(swap_texs.back().Get(), 0, NULL, m_targaData, rowPitch, 0);
+
+
+
+
+
+
+
+            // Create the shader resource view.
+    ID3D11ShaderResourceView* shaderResourceViewMap;
+    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
+    shaderResourceViewDesc.Format = texDesc.Format;
+    shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+    shaderResourceViewDesc.Texture2D.MipLevels = 1;
+    d3d_device->CreateShaderResourceView(swap_texs.back().Get(), &shaderResourceViewDesc, &shaderResourceViewMap);
+    shaderResourceViewMaps.push_back(shaderResourceViewMap);
+
+
 
     // Create a view resource for the swapchain image target that we can use to set up rendering.
     D3D11_RENDER_TARGET_VIEW_DESC target_desc = {};
@@ -969,16 +1045,6 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     // create a View for the texture, we need a concrete variant of the texture format like UNORM.
     target_desc.Format = (DXGI_FORMAT)d3d_swapchain_fmt;
     d3d_device->CreateRenderTargetView(d3d_swapchain_img.texture, &target_desc, &result.target_view);
-
-        // Create the shader resource view.
-    ID3D11ShaderResourceView* shaderResourceViewMap;
-    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;
-    shaderResourceViewDesc.Format = texDesc.Format;
-    shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-    shaderResourceViewDesc.Texture2D.MipLevels = 1;
-    d3d_device->CreateShaderResourceView(d3d_swapchain_img.texture, &shaderResourceViewDesc, &shaderResourceViewMap);
-    shaderResourceViewMaps.push_back(shaderResourceViewMap);
     // Create a depth buffer that matches
     ID3D11Texture2D* depth_texture;
     D3D11_TEXTURE2D_DESC depth_desc = {};
@@ -1103,6 +1169,27 @@ void app_init() {
     d3d_device->CreateBuffer(&ind_buff_desc, &ind_buff_data, &app_index_buffer);
     d3d_device->CreateBuffer(&const_buff_desc, nullptr, &app_constant_buffer);
 
+    D3D11_SAMPLER_DESC samplerDesc;
+    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    samplerDesc.MipLODBias = 0.0f;
+    samplerDesc.MaxAnisotropy = 1;
+    samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+    samplerDesc.BorderColor[0] = 0;
+    samplerDesc.BorderColor[1] = 0;
+    samplerDesc.BorderColor[2] = 0;
+    samplerDesc.BorderColor[3] = 0;
+    samplerDesc.MinLOD = 0;
+    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+    // Create the texture sampler state.
+    auto result = d3d_device->CreateSamplerState(&samplerDesc, &m_sampleState);
+    if (FAILED(result)) {
+        throw std::exception("fail to create sampler state");
+    }
+    
     //D3D11_SUBRESOURCE_DATA vert_buff_data = {quad_verts};
     //D3D11_SUBRESOURCE_DATA ind_buff_data = {quad_inds};
     //CD3D11_BUFFER_DESC vert_buff_desc(sizeof(quad_verts), D3D11_BIND_VERTEX_BUFFER);
