@@ -673,11 +673,29 @@ void openxr_render_frame() {
     end_info.layers = &layer;
     xrEndFrame(xr_session, &end_info);
 }
+void check_pixel_d3d(int id, uint32_t img_id) {
+    auto mOffscreenSurfaceD3D11Texture = swap_texs[id];
+    D3D11_TEXTURE2D_DESC textureDesc = {0};
+    ID3D11Device* device;
+    ID3D11DeviceContext* context;
+    mOffscreenSurfaceD3D11Texture->GetDesc(&textureDesc);
+    mOffscreenSurfaceD3D11Texture->GetDevice(&device);
+    device->GetImmediateContext(&context);
+    ID3D11Texture2D* cpuTexture = nullptr;
+    SUCCEEDED(device->CreateTexture2D(&textureDesc, nullptr, &cpuTexture));
 
-///////////////////////////////////////////
+    context->CopyResource(cpuTexture, mOffscreenSurfaceD3D11Texture);
+
+    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+    context->Map(cpuTexture, 0, D3D11_MAP_READ, 0, &mappedSubresource);
+    
+}
+    ///////////////////////////////////////////
 void render_to_texture(int id, uint32_t img_id) {
     d3d_context->OMSetRenderTargets(1, &render_target_views[id], xr_swapchains[id].surface_data[img_id].depth_view);
     mCubeRenderer->Draw();
+    //check pixel using d3d
+    //check_pixel_d3d(id, img_id);
     d3d_context->OMSetRenderTargets(1, &xr_swapchains[id].surface_data[img_id].target_view, xr_swapchains[id].surface_data[img_id].depth_view);
 }
 bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjectionView>& views, XrCompositionLayerProjection& layer) {
@@ -700,7 +718,7 @@ bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjecti
         uint32_t img_id;
         XrSwapchainImageAcquireInfo acquire_info = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
         xrAcquireSwapchainImage(xr_swapchains[i].handle, &acquire_info, &img_id);
-        render_to_texture(i, img_id);
+        
         // Wait until the image is available to render to. The compositor could still be
         // reading from it.
         XrSwapchainImageWaitInfo wait_info = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
@@ -714,7 +732,7 @@ bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjecti
         views[i].subImage.swapchain = xr_swapchains[i].handle;
         views[i].subImage.imageRect.offset = {0, 0};
         views[i].subImage.imageRect.extent = {xr_swapchains[i].width, xr_swapchains[i].height};
-
+        render_to_texture(i, img_id);
         // Call the rendering callback with our view and swapchain info
         d3d_render_layer(views[i], xr_swapchains[i].surface_data[img_id], shaderResourceViewMaps[i]);
 
@@ -921,6 +939,7 @@ HANDLE GetHandle(ID3D11Texture2D* D3D11Texture2D) {
     hr = dxgiResource->GetSharedHandle(&sharedHandle);
     return sharedHandle;*/
 }
+
 void InitializeEGL(ID3D11Texture2D* d3dTex, int width, int height) {
     HANDLE sharedHandle = GetHandle(d3dTex);
     mEglSurface = EGL_NO_SURFACE;
@@ -960,6 +979,7 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     d3d_swapchain_img.texture->GetDesc(&texDesc);
 
     texDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    texDesc.Usage = D3D11_USAGE_DYNAMIC;
     texDesc.MipLevels = 1;
     texDesc.ArraySize = 1;
     texDesc.SampleDesc.Count = 1;
@@ -968,8 +988,6 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     texDesc.CPUAccessFlags = 0;
     texDesc.MiscFlags = D3D11_RESOURCE_MISC_SHARED;
-
-    //Microsoft::WRL::ComPtr<ID3D11Texture2D> d3dTex;
 
     ID3D11Texture2D* mOffscreenSurfaceD3D11Texture;
 
@@ -989,8 +1007,15 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
     auto rowPitch = (texDesc.Width * 4) * sizeof(unsigned char);
     auto imageSize = texDesc.Width * texDesc.Height * 4;
     unsigned char* m_targaData = new unsigned char[imageSize];
-    d3d_context->UpdateSubresource(swap_texs.back(), 0, NULL, m_targaData, rowPitch, 0);
+    for (int i = 0; i < imageSize; i += 4) {
+        m_targaData[i] = (unsigned char)255;
+        m_targaData[i+1] = 0;
+        m_targaData[i+2] = 0;
+        m_targaData[i + 3] = (unsigned char)255;
 
+    }
+    d3d_context->UpdateSubresource(swap_texs.back(), 0, NULL, m_targaData, rowPitch, 0);
+    //mCubeRenderer->UpdateWindowSize(0,0,texDesc.Width, texDesc.Height);
     // Create the shader resource view.
     ID3D11ShaderResourceView* shaderResourceViewMap;
     D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc;

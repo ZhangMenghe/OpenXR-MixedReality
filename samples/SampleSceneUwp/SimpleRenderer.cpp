@@ -84,7 +84,97 @@ GLuint CompileProgram(const std::string& vsSource, const std::string& fsSource) 
 
     return program;
 }
+void SimpleRenderer::drawQuadUsingGL() {
+    GLuint m2DProgram;
+    GLint mTexture2DUniformLocation;
 
+    constexpr char kVS[] =
+        R"(precision highp float;
+            attribute vec4 position;
+            varying vec2 texcoord;
+
+            void main()
+            {
+                gl_Position = vec4(position.xy, 0.0, 1.0);
+                texcoord = (position.xy * 0.5) + 0.5;
+            })";
+
+    constexpr char kFS[] =
+        R"(precision highp float;
+            uniform sampler2D tex;
+            varying vec2 texcoord;
+
+            void main()
+            {
+                gl_FragColor = texture2D(tex, texcoord);
+            })";
+
+    m2DProgram = CompileProgram(kVS, kFS);
+    mTexture2DUniformLocation = glGetUniformLocation(m2DProgram, "tex");
+
+    uint8_t textureInitData[16] = {
+        255,
+        0,
+        0,
+        255, // Red
+        0,
+        255,
+        0,
+        255, // Green
+        0,
+        0,
+        255,
+        255, // Blue
+        255,
+        255,
+        0,
+        255 // Red + Green
+    };
+
+    // Create a simple RGBA texture
+    GLuint tex = 0;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureInitData);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Draw a quad using the texture
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(m2DProgram);
+    glUniform1i(mTexture2DUniformLocation, 0);
+
+    GLint positionLocation = glGetAttribLocation(m2DProgram, "position");
+    glUseProgram(m2DProgram);
+    const GLfloat vertices[] = {
+        -1.0f,
+        1.0f,
+        0.5f,
+        -1.0f,
+        -1.0f,
+        0.5f,
+        1.0f,
+        -1.0f,
+        0.5f,
+        -1.0f,
+        1.0f,
+        0.5f,
+        1.0f,
+        -1.0f,
+        0.5f,
+        1.0f,
+        1.0f,
+        0.5f,
+    };
+
+    glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(positionLocation);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glDeleteProgram(m2DProgram);
+    glFlush();
+}
 SimpleRenderer::SimpleRenderer(bool isHolographic)
     : mWindowWidth(1268)
     , mWindowHeight(720)
@@ -192,10 +282,7 @@ SimpleRenderer::~SimpleRenderer() {
     }
 }
 void SimpleRenderer::Draw() {
-    glEnable(GL_DEPTH_TEST);
-
-    // On HoloLens, it is important to clear to transparent.
-    glClearColor(0.0f, 1.f, 0.f, 1.f);
+    glClearColor(0.0f, 1.f, 1.f, 1.f);
 
     // On HoloLens, this will also update the camera buffers (constant and back).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

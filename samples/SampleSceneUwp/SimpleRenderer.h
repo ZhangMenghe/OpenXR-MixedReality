@@ -9,7 +9,7 @@
         void Draw(MathHelper::Matrix4 proj_mat);
         void Draw();
         void UpdateWindowSize(int offx, int offy, GLsizei width, GLsizei height);
-
+        void drawQuadUsingGL();
     private:
         GLuint mProgram;
         GLsizei mWindowWidth;
