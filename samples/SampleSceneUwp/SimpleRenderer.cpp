@@ -289,7 +289,7 @@ void SimpleRenderer::Draw() {
     glFlush();
 }
 
-void SimpleRenderer::Draw(MathHelper::Matrix4 proj_mat) {
+void SimpleRenderer::Draw(MathHelper::Matrix4& proj_mat) {
     glEnable(GL_DEPTH_TEST);
 
     // On HoloLens, it is important to clear to transparent.
