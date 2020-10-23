@@ -69,3 +69,6 @@ namespace winrt::impl {
     template <typename Async>
     auto wait_for(Async const& async, Windows::Foundation::TimeSpan const& timeout);
 }
+#define LOGE(...) printf(__VA_ARGS__)
+#define LOGI(...) printf(__VA_ARGS__)
+#define GLSL_VERSION "#version 300 es\n"

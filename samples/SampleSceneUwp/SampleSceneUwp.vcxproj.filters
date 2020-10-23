@@ -6,11 +6,35 @@
     <ClCompile Include="Scene_Orbit.cpp" />
     <ClCompile Include="Scene_HandTracking.cpp" />
     <ClCompile Include="SimpleRenderer.cpp" />
+    <ClCompile Include="GLPipeline\Mesh.cpp">
+      <Filter>GLPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="GLPipeline\Shader.cpp">
+      <Filter>GLPipeline</Filter>
+    </ClCompile>
+    <ClCompile Include="GLPipeline\Texture.cpp">
+      <Filter>GLPipeline</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="SimpleRenderer.h" />
     <ClInclude Include="MathHelper.h" />
+    <ClInclude Include="GLPipeline\Camera.h">
+      <Filter>GLPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="GLPipeline\Mesh.h">
+      <Filter>GLPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="GLPipeline\Primitive.h">
+      <Filter>GLPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="GLPipeline\Shader.h">
+      <Filter>GLPipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="GLPipeline\Texture.h">
+      <Filter>GLPipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
@@ -26,6 +50,9 @@
   <ItemGroup>
     <Filter Include="DeploymentContent">
       <UniqueIdentifier>{8eb32a1e-ec4a-4c3c-881e-2e7e281f7df2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GLPipeline">
+      <UniqueIdentifier>{5c1da284-ab0b-403a-9443-7e344f11690d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

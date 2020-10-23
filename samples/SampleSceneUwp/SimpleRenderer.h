@@ -1,15 +1,24 @@
-#pragma once
+#ifndef SIMPLE_RENDERER_H
+#define SIMPLE_RENDERER_H
 
 #include "pch.h"
+#include <GLPipeline/Shader.h>
+
+
 
     class SimpleRenderer {
     public:
-        SimpleRenderer(bool holographic);
+        SimpleRenderer();
         ~SimpleRenderer();
-        void Draw(MathHelper::Matrix4& proj_mat);
         void Draw();
         void UpdateWindowSize(int offx, int offy, GLsizei width, GLsizei height);
-        void drawQuadUsingGL();
+
+    protected:
+        GLuint vao_;
+        Shader shader_;
+        glm::vec2 r_scale_, r_offset_;
+        const static int MAX_INSTANCES = 5;
+
     private:
         GLuint mProgram;
         GLsizei mWindowWidth;
@@ -31,3 +40,4 @@
         int mDrawCount;
         bool mIsHolographic;
     };
+#endif

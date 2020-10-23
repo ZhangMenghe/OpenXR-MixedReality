@@ -114,7 +114,7 @@ namespace {
             EGLint panelHeight = 0;
             eglQuerySurface(mEglDisplay, mEglSurface, EGL_WIDTH, &panelWidth);
             eglQuerySurface(mEglDisplay, mEglSurface, EGL_HEIGHT, &panelHeight);
-            mCubeRenderer = new SimpleRenderer(false);
+            mCubeRenderer = new SimpleRenderer();
             //mCubeRenderer->UpdateWindowSize(panelWidth, panelHeight);
             
         }

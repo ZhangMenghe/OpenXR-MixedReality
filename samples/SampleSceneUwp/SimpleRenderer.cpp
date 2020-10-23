@@ -1,16 +1,10 @@
-//
-// This file is used by the template to render a basic scene using GL.
-//
-
 #include "pch.h"
-#include "SimpleRenderer.h"
-#include "MathHelper.h"
 
+#include "SimpleRenderer.h"
+#include <GLPipeline/Mesh.h>
+#include <GLPipeline/Primitive.h>
 // These are used by the shader compilation methods.
 #include <vector>
-#include <iostream>
-#include <fstream>
-
 
 #define STRING(s) #s
 
@@ -84,265 +78,83 @@ GLuint CompileProgram(const std::string& vsSource, const std::string& fsSource) 
 
     return program;
 }
-void SimpleRenderer::drawQuadUsingGL() {
-    GLuint m2DProgram;
-    GLint mTexture2DUniformLocation;
 
-    constexpr char kVS[] =
-        R"(precision highp float;
-            attribute vec4 position;
-            varying vec2 texcoord;
-
-            void main()
-            {
-                gl_Position = vec4(position.xy, 0.0, 1.0);
-                texcoord = (position.xy * 0.5) + 0.5;
-            })";
-
-    constexpr char kFS[] =
-        R"(precision highp float;
-            uniform sampler2D tex;
-            varying vec2 texcoord;
-
-            void main()
-            {
-                gl_FragColor = texture2D(tex, texcoord);
-            })";
-
-    m2DProgram = CompileProgram(kVS, kFS);
-    mTexture2DUniformLocation = glGetUniformLocation(m2DProgram, "tex");
-
-    uint8_t textureInitData[16] = {
-        255,
-        0,
-        0,
-        255, // Red
-        0,
-        255,
-        0,
-        255, // Green
-        0,
-        0,
-        255,
-        255, // Blue
-        255,
-        255,
-        0,
-        255 // Red + Green
-    };
-
-    // Create a simple RGBA texture
-    GLuint tex = 0;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, textureInitData);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-    // Draw a quad using the texture
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(m2DProgram);
-    glUniform1i(mTexture2DUniformLocation, 0);
-
-    GLint positionLocation = glGetAttribLocation(m2DProgram, "position");
-    glUseProgram(m2DProgram);
-    const GLfloat vertices[] = {
-        -1.0f,
-        1.0f,
-        0.5f,
-        -1.0f,
-        -1.0f,
-        0.5f,
-        1.0f,
-        -1.0f,
-        0.5f,
-        -1.0f,
-        1.0f,
-        0.5f,
-        1.0f,
-        -1.0f,
-        0.5f,
-        1.0f,
-        1.0f,
-        0.5f,
-    };
-
-    glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(positionLocation);
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    glDeleteProgram(m2DProgram);
-    glFlush();
-}
-SimpleRenderer::SimpleRenderer(bool isHolographic)
-    : mWindowWidth(1268)
-    , mWindowHeight(720)
-    , mDrawCount(0)
-    , mIsHolographic(isHolographic) {
+SimpleRenderer::SimpleRenderer() {
     // Vertex Shader source
     const std::string vs = STRING(
-#version 300 es\n
+        precision mediump float;
 
-        uniform mat4 uModelMatrix; uniform mat4 uViewMatrix; uniform mat4 uProjMatrix; in vec4 aPosition; in vec4 aColor; out vec4 vColor;
+        layout(location = 0) in vec3 aPosition;
+        layout(location = 1) in vec3 aTexcoord;
+
         void main() {
-            gl_Position = uProjMatrix * uViewMatrix * aPosition;
-            vColor = aColor;
-        });
+            gl_Position = vec4(aPosition.xy, .0, 1.0);
+        }        
+        );
 
     // Fragment Shader source
     const std::string fs = STRING(
-#version 300 es\n
-
         precision mediump float;
 
-        in vec4 vColor;
         out vec4 fragColor;
-        void main() { fragColor = vec4(1.0, .0, .0, 1.0); });
+        void main() { fragColor = vec4(1.0, .0, .0, 1.0); }
+        );
 
-    // Set up the shader and its uniform/attribute locations.
-    mProgram = CompileProgram(vs, fs);
-    mPositionAttribLocation = glGetAttribLocation(mProgram, "aPosition");
-    mColorAttribLocation = glGetAttribLocation(mProgram, "aColor");
-    mRtvIndexAttribLocation = glGetAttribLocation(mProgram, "aRenderTargetArrayIndex");
-    mModelUniformLocation = glGetUniformLocation(mProgram, "uModelMatrix");
-    mViewUniformLocation = glGetUniformLocation(mProgram, "uViewMatrix");
-    mProjUniformLocation = glGetUniformLocation(mProgram, "uProjMatrix");
 
-    // Then set up the cube geometry.
-    float halfWidth = 0.1f;
-    GLfloat vertexPositions[] = {
-        -halfWidth, -halfWidth, -halfWidth, -halfWidth, -halfWidth, halfWidth,  -halfWidth, halfWidth,
-        -halfWidth, -halfWidth, halfWidth,  halfWidth,  halfWidth,  -halfWidth, -halfWidth, halfWidth,
-        -halfWidth, halfWidth,  halfWidth,  halfWidth,  -halfWidth, halfWidth,  halfWidth,  halfWidth,
-    };
 
-    glGenBuffers(1, &mVertexPositionBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexPositions), vertexPositions, GL_STATIC_DRAW);
 
-    GLfloat vertexColors[] = {
-        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-        1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-    };
+            const std::string vso = STRING(
+            in vec3 aPosition; 
+            void main() {
+                gl_Position = vec4(aPosition.xy, .0, 1.0);
+            });
 
-    glGenBuffers(1, &mVertexColorBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexColors), vertexColors, GL_STATIC_DRAW);
+        // Fragment Shader source
+        const std::string fso = STRING(
+            precision mediump float;
 
-    short indices[] = {
-        0, 1, 2, // -x
-        1, 3, 2,
+            out vec4 fragColor;
+            void main() { fragColor = vec4(1.0, .0, .0, 1.0); });
 
-        4, 6, 5, // +x
-        5, 6, 7,
+                if (!shader_.AddShader(GL_VERTEX_SHADER, vs) 
+                    || !shader_.AddShader(GL_FRAGMENT_SHADER, fs) 
+                    || !shader_.CompileAndLink())
+            throw std::exception("Failed to create quad shader");
 
-        0, 5, 1, // -y
-        0, 4, 5,
 
-        2, 7, 6, // +y
-        2, 3, 7,
-
-        0, 6, 4, // -z
-        0, 2, 6,
-
-        1, 7, 3, // +z
-        1, 5, 7,
-    };
-
-    glGenBuffers(1, &mIndexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    float renderTargetArrayIndices[] = {0.f, 1.f};
-    glGenBuffers(1, &mRenderTargetArrayIndices);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mRenderTargetArrayIndices);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(renderTargetArrayIndices), renderTargetArrayIndices, GL_STATIC_DRAW);
+        Mesh::InitQuadWithTex(vao_, quad_vertices_tex, 4, quad_indices, 6);
 }
 
 SimpleRenderer::~SimpleRenderer() {
-    if (mProgram != 0) {
-        glDeleteProgram(mProgram);
-        mProgram = 0;
-    }
 
-    if (mVertexPositionBuffer != 0) {
-        glDeleteBuffers(1, &mVertexPositionBuffer);
-        mVertexPositionBuffer = 0;
-    }
-
-    if (mVertexColorBuffer != 0) {
-        glDeleteBuffers(1, &mVertexColorBuffer);
-        mVertexColorBuffer = 0;
-    }
-
-    if (mIndexBuffer != 0) {
-        glDeleteBuffers(1, &mIndexBuffer);
-        mIndexBuffer = 0;
-    }
 }
 void SimpleRenderer::Draw() {
-    glClearColor(0.0f, 1.f, 1.f, 1.f);
-
-    // On HoloLens, this will also update the camera buffers (constant and back).
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glFlush();
-}
-
-void SimpleRenderer::Draw(MathHelper::Matrix4& proj_mat) {
-    glEnable(GL_DEPTH_TEST);
-
     // On HoloLens, it is important to clear to transparent.
-    glClearColor(0.0f, 1.f, 0.f, 1.f);
+    glClearColor(1.0f, 1.f, 0.f, 1.f);
 
     // On HoloLens, this will also update the camera buffers (constant and back).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    GLuint sp = shader_.Use();
+    //Shader::Uniform(sp, "uScale", r_scale_);
+    //Shader::Uniform(sp, "uOffset", r_offset_);
+    glBindVertexArray(vao_);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
-    if (mProgram == 0)
-        return;
+    glBindVertexArray(0);
+    shader_.UnUse();
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
 
-    glUseProgram(mProgram);
-
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexPositionBuffer);
-    glEnableVertexAttribArray(mPositionAttribLocation);
-    glVertexAttribPointer(mPositionAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, mVertexColorBuffer);
-    glEnableVertexAttribArray(mColorAttribLocation);
-    glVertexAttribPointer(mColorAttribLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
-    MathHelper::Vec3 position = MathHelper::Vec3(0.f, 0.f, -2.f);
-    MathHelper::Matrix4 modelMatrix = MathHelper::SimpleModelMatrix((float)mDrawCount / 50.0f, position);
-    glUniformMatrix4fv(mModelUniformLocation, 1, GL_FALSE, &(modelMatrix.m[0][0]));
-
-    //if (mIsHolographic) {
-    //    MathHelper::Matrix4 holographicViewMatrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1}; // the interpolated view matrix
-    //    glGetFloatv(GLEXT_HOLOGRAPHIC_MONO_VIEW_MATRIX_ANGLE, &(holographicViewMatrix.m[0][0]));
-    //    glUniformMatrix4fv(mViewUniformLocation, 1, GL_FALSE, &(holographicViewMatrix.m[0][0]));
-
-    //    MathHelper::Matrix4 projectionMatrix = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-    //    glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(projectionMatrix.m[0][0]));
-    //} else {
-        MathHelper::Matrix4 viewMatrix = MathHelper::SimpleViewMatrix();
-        glUniformMatrix4fv(mViewUniformLocation, 1, GL_FALSE, &(viewMatrix.m[0][0]));
-
-        //MathHelper::Matrix4 projectionMatrix = MathHelper::SimpleProjectionMatrix(float(mWindowWidth) / float(mWindowHeight));
-        glUniformMatrix4fv(mProjUniformLocation, 1, GL_FALSE, &(proj_mat.m[0][0]));
-    //}
-
-    // Draw 36 indices: six faces, two triangles per face, 3 indices per triangle
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBuffer);
-    glDrawElements(GL_TRIANGLES, (6 * 2) * 3, GL_UNSIGNED_SHORT, 0);
-
-    mDrawCount += 1;
     glFlush();
 }
+
 
 void SimpleRenderer::UpdateWindowSize(int offsetx, int offsety, GLsizei width, GLsizei height) {
-    if (!mIsHolographic) {
-        glViewport(offsetx, offsety, width, height);
+    glViewport(0,0, width, height);
 
-        mWindowWidth = width;
-        mWindowHeight = height;
-    }
+    mWindowWidth = width;
+    mWindowHeight = height;
 }

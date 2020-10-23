@@ -702,6 +702,12 @@ void check_pixel_d3d(int id, uint32_t img_id) {
     ///////////////////////////////////////////
 void render_to_texture(int id, uint32_t img_id) {
     d3d_context->OMSetRenderTargets(1, &render_target_views[id], xr_swapchains[id].surface_data[img_id].depth_view);
+
+    /*float clear[] = {0, 0, 0, 1};
+    d3d_context->ClearRenderTargetView(render_target_views[id], clear);
+    d3d_context->ClearDepthStencilView(xr_swapchains[id].surface_data[img_id].depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);*/
+
+
     mCubeRenderers[id * 3 + img_id].Draw();
     //check pixel using d3d
     //check_pixel_d3d(id, img_id);
@@ -746,16 +752,19 @@ bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjecti
         views[i].subImage.swapchain = xr_swapchains[i].handle;
         views[i].subImage.imageRect.offset = {0, 0};
         views[i].subImage.imageRect.extent = {xr_swapchains[i].width, xr_swapchains[i].height};
+        
+        XrRect2Di& rect = views[i].subImage.imageRect;
+        mCubeRenderers[i * 3 + img_id].UpdateWindowSize(
+            (int)rect.offset.x, (int)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height);
+
         render_to_texture(i, img_id);
         // Call the rendering callback with our view and swapchain info
 
         currentI = i;
         currentImg_id = img_id;
         d3d_render_layer(views[i], xr_swapchains[i].surface_data[img_id], shaderResourceViewMaps[i]);
-        XrRect2Di& rect = views[i].subImage.imageRect;
-        mCubeRenderers[i * 3 + img_id].UpdateWindowSize(
-            (int)rect.offset.x, (int)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height);
-
+        
+        
         // And tell OpenXR we're done with rendering to this one!
         XrSwapchainImageReleaseInfo release_info = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
         xrReleaseSwapchainImage(xr_swapchains[i].handle, &release_info);
@@ -998,7 +1007,7 @@ void InitializeEGL(ID3D11Texture2D* d3dTex, int width, int height) {
     eglQuerySurface(mEglDisplay, mEglSurface, EGL_WIDTH, &panelWidth);
     eglQuerySurface(mEglDisplay, mEglSurface, EGL_HEIGHT, &panelHeight);
     mEglSurfaces.push_back(mEglSurface);
-    mCubeRenderers.push_back(SimpleRenderer(false));
+    mCubeRenderers.push_back(SimpleRenderer());
 }
 
 swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
