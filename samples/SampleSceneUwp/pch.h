@@ -72,3 +72,48 @@ namespace winrt::impl {
 #define LOGE(...) printf(__VA_ARGS__)
 #define LOGI(...) printf(__VA_ARGS__)
 #define GLSL_VERSION "#version 300 es\n"
+
+struct GLColor {
+    constexpr GLColor()
+        : R(0)
+        , G(0)
+        , B(0)
+        , A(0) {
+    }
+    constexpr GLColor(GLubyte r, GLubyte g, GLubyte b, GLubyte a)
+        : R(r)
+        , G(g)
+        , B(b)
+        , A(a) {
+    }
+    GLColor(GLuint colorValue);
+
+
+    GLubyte& operator[](size_t index) {
+        return (&R)[index];
+    }
+
+    const GLubyte& operator[](size_t index) const {
+        return (&R)[index];
+    }
+
+    const GLubyte* data() const {
+        return &R;
+    }
+    GLubyte* data() {
+        return &R;
+    }
+
+
+    GLubyte R, G, B, A;
+
+    static const GLColor black;
+    static const GLColor blue;
+    static const GLColor cyan;
+    static const GLColor green;
+    static const GLColor red;
+    static const GLColor transparentBlack;
+    static const GLColor white;
+    static const GLColor yellow;
+    static const GLColor magenta;
+};

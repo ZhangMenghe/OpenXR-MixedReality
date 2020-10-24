@@ -697,10 +697,20 @@ void check_pixel_d3d(int id, uint32_t img_id) {
 
     D3D11_MAPPED_SUBRESOURCE mappedSubresource;
     context->Map(cpuTexture, 0, D3D11_MAP_READ, 0, &mappedSubresource);
-    
+
+    GLColor* byteData = reinterpret_cast<GLColor*>(mappedSubresource.pData);
+    GLColor t1 = byteData[0];
+    GLColor tm = byteData[int(0.5f * (textureDesc.Width * textureDesc.Height + textureDesc.Width))];
+    std::cout << t1.R << " " << t1.G << std::endl;
 }
     ///////////////////////////////////////////
 void render_to_texture(int id, uint32_t img_id) {
+    auto mEglSurface = mEglSurfaces[id];
+    EGLBoolean success = eglMakeCurrent(mEglDisplay, mEglSurface, mEglSurface, mEglContext);
+    if (success == EGL_FALSE) {
+        throw std::exception("Failed to make fullscreen EGLSurface current");
+    }
+
     d3d_context->OMSetRenderTargets(1, &render_target_views[id], xr_swapchains[id].surface_data[img_id].depth_view);
 
     /*float clear[] = {0, 0, 0, 1};
@@ -708,9 +718,9 @@ void render_to_texture(int id, uint32_t img_id) {
     d3d_context->ClearDepthStencilView(xr_swapchains[id].surface_data[img_id].depth_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);*/
 
 
-    mCubeRenderers[id * 3 + img_id].Draw();
+    mCubeRenderers[id].Draw();
     //check pixel using d3d
-    //check_pixel_d3d(id, img_id);
+    check_pixel_d3d(id, img_id);
     d3d_context->OMSetRenderTargets(1, &xr_swapchains[id].surface_data[img_id].target_view, xr_swapchains[id].surface_data[img_id].depth_view);
 }
 
@@ -754,7 +764,7 @@ bool openxr_render_layer(XrTime predictedTime, vector<XrCompositionLayerProjecti
         views[i].subImage.imageRect.extent = {xr_swapchains[i].width, xr_swapchains[i].height};
         
         XrRect2Di& rect = views[i].subImage.imageRect;
-        mCubeRenderers[i * 3 + img_id].UpdateWindowSize(
+        mCubeRenderers[i].UpdateWindowSize(
             (int)rect.offset.x, (int)rect.offset.y, (float)rect.extent.width, (float)rect.extent.height);
 
         render_to_texture(i, img_id);
@@ -1054,7 +1064,10 @@ swapchain_surfdata_t d3d_make_surface_data(XrBaseInStructure& swapchain_img) {
         m_targaData[i + 3] = (unsigned char)255;
 
     }
-    d3d_context->UpdateSubresource(swap_texs.back(), 0, NULL, m_targaData, rowPitch, 0);
+    D3D11_MAPPED_SUBRESOURCE mappedResource;
+    //d3d_context->UpdateSubresource(swap_texs.back(), 0, NULL, m_targaData, rowPitch, 0);
+    d3d_context->Map(swap_texs.back(), 0, D3D11_MAP_READ, 0, &mappedResource);
+
     //mCubeRenderer->UpdateWindowSize(0,0,texDesc.Width, texDesc.Height);
     // Create the shader resource view.
     ID3D11ShaderResourceView* shaderResourceViewMap;
@@ -1265,7 +1278,7 @@ void app_draw(XrCompositionLayerProjectionView& view) {
                                          fView._44);
 
     auto index = currentI * 3 + currentImg_id;
-    auto mEglSurface = mEglSurfaces[index];
+    auto mEglSurface = mEglSurfaces[currentI];
     EGLBoolean success = eglMakeCurrent(mEglDisplay, mEglSurface, mEglSurface, mEglContext);
     if (success == EGL_FALSE) {
         throw std::exception("Failed to make fullscreen EGLSurface current");

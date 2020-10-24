@@ -97,32 +97,25 @@ SimpleRenderer::SimpleRenderer() {
         precision mediump float;
 
         out vec4 fragColor;
+        void main() { fragColor = vec4(.0, .0, 1.0, 1.0); }
+        );
+
+        // Fragment Shader source
+    const std::string gs = STRING(
+precision mediump float;
+
+        out vec4 fragColor;
         void main() { fragColor = vec4(1.0, .0, .0, 1.0); }
         );
 
+    if (!shader_.AddShader(GL_VERTEX_SHADER, vs) 
+        || !shader_.AddShader(GL_FRAGMENT_SHADER, fs) 
+        || !shader_.CompileAndLink())
+        throw std::exception("Failed to create quad shader");
+    //if (!cshader_.AddShader(GL_COMPUTE_SHADER, gs) || !cshader_.CompileAndLink())
+    //    throw std::exception("=====Failed to create raycast geometry shader");
 
-
-
-            const std::string vso = STRING(
-            in vec3 aPosition; 
-            void main() {
-                gl_Position = vec4(aPosition.xy, .0, 1.0);
-            });
-
-        // Fragment Shader source
-        const std::string fso = STRING(
-            precision mediump float;
-
-            out vec4 fragColor;
-            void main() { fragColor = vec4(1.0, .0, .0, 1.0); });
-
-                if (!shader_.AddShader(GL_VERTEX_SHADER, vs) 
-                    || !shader_.AddShader(GL_FRAGMENT_SHADER, fs) 
-                    || !shader_.CompileAndLink())
-            throw std::exception("Failed to create quad shader");
-
-
-        Mesh::InitQuadWithTex(vao_, quad_vertices_tex, 4, quad_indices, 6);
+    Mesh::InitQuadWithTex(vao_, quad_vertices_tex, 4, quad_indices, 6);
 }
 
 SimpleRenderer::~SimpleRenderer() {
@@ -130,7 +123,7 @@ SimpleRenderer::~SimpleRenderer() {
 }
 void SimpleRenderer::Draw() {
     // On HoloLens, it is important to clear to transparent.
-    glClearColor(1.0f, 1.f, 0.f, 1.f);
+    glClearColor(1.0f, 1.0f, 0.f, 1.0f);
 
     // On HoloLens, this will also update the camera buffers (constant and back).
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -153,7 +146,7 @@ void SimpleRenderer::Draw() {
 
 
 void SimpleRenderer::UpdateWindowSize(int offsetx, int offsety, GLsizei width, GLsizei height) {
-    glViewport(0,0, width, height);
+    glViewport(offsetx, offsety, width, height);
 
     mWindowWidth = width;
     mWindowHeight = height;
